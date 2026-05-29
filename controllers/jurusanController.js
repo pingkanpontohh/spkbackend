@@ -1,17 +1,13 @@
 // backend/controllers/jurusanController.js
-const db = require("../config/db"); // Menggunakan db.js berbasis Promise Pool
+const db = require("../config/db");
 
-// ======================================
-// 1. AMBIL SEMUA DATA JURUSAN (GET)
-// ======================================
+// 1. AMBIL DATA JURUSAN
 const getJurusan = async (req, res) => {
   try {
     const sql = `SELECT * FROM jurusan ORDER BY id ASC`;
-    
-    // Menggunakan await karena db.js Anda berbasis Promise
     const [result] = await db.query(sql);
 
-    // Kembalikan dalam format objek dengan properti 'data' agar dibaca lancar oleh frontend
+    // Kirim response dalam bentuk object dengan key 'data'
     res.json({
       success: true,
       data: result
@@ -22,19 +18,23 @@ const getJurusan = async (req, res) => {
   }
 };
 
-// ======================================
-// 2. TAMBAH JURUSAN BARU (POST)
-// ======================================
+// 2. TAMBAH DATA JURUSAN BARU
 const addJurusan = async (req, res) => {
   try {
-    const { nama_jurusan } = req.body;
+    // Tangkap semua parameter sesuai kolom di database Anda
+    const { kategori_id, nama_jurusan, deskripsi, gambar } = req.body;
 
     if (!nama_jurusan) {
       return res.status(400).json({ success: false, message: "Nama jurusan wajib diisi" });
     }
 
-    const sql = `INSERT INTO jurusan (nama_jurusan) VALUES (?)`;
-    await db.query(sql, [nama_jurusan]);
+    // Gunakan nilai default jika frontend tidak mengirimkan field opsional
+    const finalKategoriId = kategori_id || 1; 
+    const finalDeskripsi = deskripsi || "Deskripsi jurusan belum ditambahkan";
+    const finalGambar = gambar || "default.png";
+
+    const sql = `INSERT INTO jurusan (kategori_id, nama_jurusan, deskripsi, gambar) VALUES (?, ?, ?, ?)`;
+    await db.query(sql, [finalKategoriId, nama_jurusan, finalDeskripsi, finalGambar]);
 
     res.status(201).json({
       success: true,
@@ -46,59 +46,7 @@ const addJurusan = async (req, res) => {
   }
 };
 
-// ======================================
-// 3. UBAH DATA JURUSAN (PUT)
-// ======================================
-const updateJurusan = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { nama_jurusan } = req.body;
-
-    if (!nama_jurusan) {
-      return res.status(400).json({ success: false, message: "Nama jurusan baru wajib diisi" });
-    }
-
-    const sql = `UPDATE jurusan SET nama_jurusan = ? WHERE id = ?`;
-    await db.query(sql, [nama_jurusan, id]);
-
-    res.json({
-      success: true,
-      message: "Data jurusan berhasil diperbarui!"
-    });
-  } catch (error) {
-    console.error("Error updateJurusan:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-};
-
-// ======================================
-// 4. HAPUS DATA JURUSAN (DELETE)
-// ======================================
-const deleteJurusan = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const sql = `DELETE FROM jurusan WHERE id = ?`;
-    await db.query(sql, [id]);
-
-    res.json({
-      success: true,
-      message: "Jurusan berhasil dihapus dari sistem!"
-    });
-  } catch (error) {
-    console.error("Error deleteJurusan:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Gagal menghapus. Data ini kemungkinan masih terikat dengan tabel penilaian/kriteria.",
-      error: error.message 
-    });
-  }
-};
-
-// WAJIB DIEKSPOR SEMUANYA
 module.exports = {
   getJurusan,
-  addJurusan,
-  updateJurusan,
-  deleteJurusan
+  addJurusan
 };
