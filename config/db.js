@@ -1,24 +1,25 @@
-const mysql = require("mysql2");
+const mysql = require('mysql2');
 
-const db = mysql.createConnection({
+const connection = mysql.createConnection({
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  port: parseInt(process.env.DB_PORT) || 4000, // Mengonversi string '4000' dari .env menjadi angka
   ssl: {
-    minVersion: "TLSv1.2",
-    rejectUnauthorized: true,
-  },
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: true
+  }
 });
 
-db.connect((err) => {
+connection.connect((err) => {
   if (err) {
     console.log("Database gagal connect");
-    console.log(err);
+    console.error(err);
   } else {
     console.log("Database TiDB connected");
   }
 });
 
-module.exports = db;
+// PASTIKAN YANG DIEKSPOR ADALAH connection, BUKAN db
+module.exports = connection;
