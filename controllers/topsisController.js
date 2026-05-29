@@ -1,98 +1,21 @@
-// backend/controllers/topsisController.js
+const prosesTopsis = (req, res) => {
 
-const db = require("../config/db");
+  try {
 
+    const { jawaban, nama } = req.body;
 
-// ======================================
-// SIMPAN USER
-// ======================================
+    // =========================
+    // VALIDASI
+    // =========================
 
-const saveUser = (req, res) => {
+    if (!jawaban || jawaban.length === 0) {
 
-  const {
-
-    nama,
-    sekolah,
-    nilai_ijazah,
-    jenis_kelamin,
-    minat_utama
-
-  } = req.body;
-
-  const sql = `
-
-    INSERT INTO users
-    (
-      nama,
-      sekolah,
-      nilai_ijazah,
-      jenis_kelamin,
-      minat_utama
-    )
-
-    VALUES (?, ?, ?, ?, ?)
-
-  `;
-
-  db.query(
-
-    sql,
-
-    [
-
-      nama,
-      sekolah,
-      nilai_ijazah,
-      jenis_kelamin,
-      minat_utama
-
-    ],
-
-    (err, result) => {
-
-      if(err){
-
-        return res.status(500).json({
-
-          success:false,
-
-          message:"Gagal menyimpan user",
-
-          error:err
-
-        });
-
-      }
-
-      res.json({
-
-        success:true,
-
-        message:"User berhasil disimpan",
-
-        userId: result.insertId
-
+      return res.status(400).json({
+        success: false,
+        message: "Jawaban kosong"
       });
 
     }
-
-  );
-
-};
-
-
-// ======================================
-// PROSES TOPSIS
-// ======================================
-
-const prosesTopsis = (req, res) => {
-
-  try{
-
-    const {
-      jawaban,
-      nama
-    } = req.body;
 
     const sql = `
 
@@ -108,27 +31,40 @@ const prosesTopsis = (req, res) => {
       FROM penilaian
 
       JOIN jurusan
-      ON jurusan.id =
-      penilaian.jurusan_id
+      ON jurusan.id = penilaian.jurusan_id
 
       JOIN kriteria
-      ON kriteria.id =
-      penilaian.kriteria_id
+      ON kriteria.id = penilaian.kriteria_id
 
-      ORDER BY jurusan.id,
-      kriteria.id
+      ORDER BY jurusan.id, kriteria.id
 
     `;
 
     db.query(sql, (err, result) => {
 
-      if(err){
+      if (err) {
+
+        console.log(err);
 
         return res.status(500).json({
+          success: false,
+          error: err
+        });
 
-          success:false,
-          error:err
+      }
 
+      console.log("DATA DB:", result);
+      console.log("JAWABAN:", jawaban);
+
+      // =========================
+      // VALIDASI DATA DB
+      // =========================
+
+      if (result.length === 0) {
+
+        return res.status(400).json({
+          success: false,
+          message: "Data penilaian kosong"
         });
 
       }
@@ -141,23 +77,18 @@ const prosesTopsis = (req, res) => {
 
       result.forEach((item) => {
 
-        if(!jurusanMap[item.id]){
+        if (!jurusanMap[item.id]) {
 
           jurusanMap[item.id] = {
-
-            nama:item.nama_jurusan,
-
-            nilai:[]
-
+            nama: item.nama_jurusan,
+            nilai: []
           };
 
         }
 
         jurusanMap[item.id]
-        .nilai
-        .push(
-          parseFloat(item.nilai)
-        );
+          .nilai
+          .push(parseFloat(item.nilai));
 
       });
 
@@ -167,35 +98,39 @@ const prosesTopsis = (req, res) => {
 
       const ranking = [];
 
-      Object.keys(jurusanMap)
-      .forEach((id) => {
+      Object.keys(jurusanMap).forEach((id) => {
 
-        const data =
-        jurusanMap[id];
+        const data = jurusanMap[id];
 
         let total = 0;
 
-        data.nilai.forEach(
-          (nilai,index) => {
+        data.nilai.forEach((nilai, index) => {
 
-            total +=
-            nilai *
-            parseFloat(
-              jawaban[index]
-            );
+          const bobot = parseFloat(jawaban[index]);
 
+          console.log(
+            "nilai:",
+            nilai,
+            "bobot:",
+            bobot
+          );
+
+          // kalau bobot tidak valid
+          if (isNaN(bobot)) {
+            return;
           }
-        );
+
+          total += nilai * bobot;
+
+        });
 
         ranking.push({
 
-          jurusan_id:id,
+          jurusan_id: id,
 
-          nama:data.nama,
+          nama: data.nama,
 
-          skor:parseFloat(
-            total.toFixed(2)
-          )
+          skor: parseFloat(total.toFixed(2))
 
         });
 
@@ -205,29 +140,40 @@ const prosesTopsis = (req, res) => {
       // SORTING
       // =========================
 
-      ranking.sort(
-        (a,b) => b.skor - a.skor
-      );
+      ranking.sort((a, b) => b.skor - a.skor);
 
       // =========================
       // HASIL FINAL
       // =========================
 
-      const hasilFinal =
-      ranking.map((item,index)=>({
+      const hasilFinal = ranking.map((item, index) => ({
 
-        ranking:index+1,
+        ranking: index + 1,
 
         ...item
 
       }));
 
+      console.log("HASIL FINAL:", hasilFinal);
+
+      // =========================
+      // VALIDASI HASIL
+      // =========================
+
+      if (hasilFinal.length === 0) {
+
+        return res.status(400).json({
+          success: false,
+          message: "Hasil TOPSIS kosong"
+        });
+
+      }
+
+      const terbaik = hasilFinal[0];
+
       // =========================
       // SIMPAN HISTORY
       // =========================
-
-      const terbaik =
-      hasilFinal[0];
 
       const saveHistory = `
 
@@ -248,13 +194,24 @@ const prosesTopsis = (req, res) => {
 
         [
 
-          req.body.nama,
+          nama,
 
           terbaik.nama,
 
           terbaik.skor
 
-        ]
+        ],
+
+        (err) => {
+
+          if (err) {
+
+            console.log("Gagal simpan history");
+            console.log(err);
+
+          }
+
+        }
 
       );
 
@@ -264,64 +221,26 @@ const prosesTopsis = (req, res) => {
 
       res.json({
 
-        success:true,
+        success: true,
 
-        hasil:hasilFinal
+        hasil: hasilFinal
 
       });
 
     });
 
-  }catch(error){
+  } catch (error) {
+
+    console.log(error);
 
     res.status(500).json({
 
-      success:false,
+      success: false,
 
-      error:error.message
+      error: error.message
 
     });
 
   }
-
-};
-
-const getHistory = (req,res) => {
-
-  const sql = `
-
-    SELECT *
-    FROM history_hasil
-
-    ORDER BY created_at DESC
-
-  `;
-
-  db.query(sql,(err,result)=>{
-
-    if(err){
-
-      return res.status(500).json(err);
-
-    }
-
-    res.json(result);
-
-  });
-
-};
-
-
-// ======================================
-// EXPORT
-// ======================================
-
-module.exports = {
-
-  saveUser,
-
-  prosesTopsis,
-
-  getHistory
 
 };
