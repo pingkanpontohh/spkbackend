@@ -161,10 +161,29 @@ const getHistory = async (req, res) => {
 };
 
 // ======================================
+// FUNGSI BARU: AMBIL DATA KRITERIA
+// ======================================
+const getKriteria = async (req, res) => {
+  try {
+    const sql = "SELECT * FROM kriteria ORDER BY id ASC";
+    const [rows] = await db.query(sql);
+    res.json({ 
+      success: true, 
+      total_data: rows.length, 
+      data: rows 
+    });
+  } catch (error) {
+    console.error("Error getKriteria:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// ======================================
 // WAJIB DIEKSPOR SEMUANYA
 // ======================================
 module.exports = {
   saveUser,
   prosesTopsis,
-  getHistory
+  getHistory,
+  getKriteria // <-- Ditambahkan di sini
 };
