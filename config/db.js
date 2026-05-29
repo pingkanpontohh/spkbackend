@@ -1,25 +1,25 @@
+// backend/config/db.js
 const mysql = require('mysql2');
 
-const connection = mysql.createConnection({
+// Menggunakan createPool, bukan createConnection biasa agar koneksi lebih stabil di Vercel
+const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  port: parseInt(process.env.DB_PORT) || 4000, // Mengonversi string '4000' dari .env menjadi angka
+  port: parseInt(process.env.DB_PORT) || 4000,
   ssl: {
     minVersion: 'TLSv1.2',
     rejectUnauthorized: true
-  }
+  },
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
-connection.connect((err) => {
-  if (err) {
-    console.log("Database gagal connect");
-    console.error(err);
-  } else {
-    console.log("Database TiDB connected");
-  }
-});
+// Menggunakan promise wrapper agar query database berjalan asinkronus dengan baik
+const db = pool.promise();
 
-// PASTIKAN YANG DIEKSPOR ADALAH connection, BUKAN db
-module.exports = connection;
+console.log("Database TiDB Pool Initialized");
+
+module.exports = db;
