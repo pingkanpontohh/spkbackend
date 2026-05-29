@@ -21,7 +21,13 @@ app.use(cors({
 
 app.use(express.json());
 
-// Tambahkan route dasar (fallback) agar jika diakses langsung di browser tidak 404
+// ======================================
+// ROUTE FALLBACK / ROOT HANDLING (TAMBAHKAN INI)
+// ======================================
+
+// Menangani POST langsung ke https://spkbackend-gamma.vercel.app/
+app.post("/", topsisRoutes); 
+
 app.get("/", (req, res) => {
     res.json({ message: "Backend SPK Jurusan Aktif!" });
 });
